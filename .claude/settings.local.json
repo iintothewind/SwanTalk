@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(node -e \"const p=require\\('./c:/Users/user02/code/SwanTalk/package.json'\\); console.log\\(p.scripts\\)\")"
+    ]
+  }
+}

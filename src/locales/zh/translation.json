@@ -1,0 +1,45 @@
+{
+  "app": {
+    "name": "SwanTalk"
+  },
+  "auth": {
+    "signIn": "登录",
+    "signUp": "创建账号",
+    "signOut": "退出登录",
+    "signInWithGoogle": "使用 Google 继续",
+    "or": "或",
+    "webViewWarning": "应用内浏览器不支持 Google 登录，请在 Safari 或 Chrome 中打开此页面。",
+    "email": "邮箱",
+    "emailPlaceholder": "you@example.com",
+    "password": "密码",
+    "passwordPlaceholder": "最少 6 位字符",
+    "displayName": "显示名称",
+    "displayNamePlaceholder": "你的名字",
+    "nameRequired": "请输入显示名称。",
+    "loading": "请稍候...",
+    "noAccount": "还没有账号？",
+    "hasAccount": "已有账号？"
+  },
+  "topic": {
+    "newTopic": "新话题",
+    "placeholder": "字母、数字、下划线",
+    "hint": "仅限字母、数字、下划线",
+    "unreadCount": "{{count}} 条新消息",
+    "alreadyExists": "该话题名称已存在。",
+    "createError": "创建话题失败。"
+  },
+  "chat": {
+    "placeholder": "输入消息...",
+    "send": "发送",
+    "charCount": "{{current}} / {{max}}",
+    "charLimitExceeded": "消息超出 {{max}} 字符限制",
+    "loadMore": "加载更早的消息"
+  },
+  "typing": {
+    "one": "{{name}} 正在输入...",
+    "many": "{{names}} 正在输入..."
+  },
+  "settings": {
+    "language": "语言"
+  }
+}

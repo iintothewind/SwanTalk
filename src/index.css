@@ -1,0 +1,68 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+* {
+  box-sizing: border-box;
+}
+
+/* Prevent iOS Safari from zooming in when focusing inputs/textareas.
+   The trigger is any input with font-size < 16px — this ensures all
+   interactive fields meet the threshold on mobile without affecting
+   the visual size (we scale the font back down visually via the parent). */
+@media (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+}
+
+/* Prose overrides for message bubbles */
+.prose p {
+  margin: 0.25em 0;
+}
+.prose p:first-child {
+  margin-top: 0;
+}
+.prose p:last-child {
+  margin-bottom: 0;
+}
+.prose ul,
+.prose ol {
+  margin: 0.25em 0;
+  padding-left: 1.5em;
+}
+.prose table {
+  font-size: 0.85em;
+  border-collapse: collapse;
+}
+.prose th,
+.prose td {
+  border: 1px solid #d1d5db;
+  padding: 4px 8px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}

@@ -1,0 +1,45 @@
+{
+  "app": {
+    "name": "SwanTalk"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Create Account",
+    "signOut": "Sign Out",
+    "signInWithGoogle": "Continue with Google",
+    "or": "or",
+    "webViewWarning": "Google sign-in is not supported inside in-app browsers. Please open this page in Safari or Chrome.",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Min. 6 characters",
+    "displayName": "Display Name",
+    "displayNamePlaceholder": "Your name",
+    "nameRequired": "Please enter a display name.",
+    "loading": "Please wait...",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  },
+  "topic": {
+    "newTopic": "New Topic",
+    "placeholder": "a-z, 0-9, _",
+    "hint": "Letters, numbers, underscores only",
+    "unreadCount": "{{count}} new",
+    "alreadyExists": "Topic name already taken.",
+    "createError": "Failed to create topic."
+  },
+  "chat": {
+    "placeholder": "Type a message...",
+    "send": "Send",
+    "charCount": "{{current}} / {{max}}",
+    "charLimitExceeded": "Message exceeds {{max}} character limit",
+    "loadMore": "Load earlier messages"
+  },
+  "typing": {
+    "one": "{{name}} is typing...",
+    "many": "{{names}} are typing..."
+  },
+  "settings": {
+    "language": "Language"
+  }
+}

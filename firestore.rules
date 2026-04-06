@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User profiles: owner can write, any authed user can read
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Topics: any authed user can read and create
+    match /topics/{topicId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.keys().hasAll(['name', 'createdBy', 'createdAt'])
+                    && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if false; // No edits or deletions in v1
+
+      // Messages: any authed user can read and create
+      match /messages/{messageId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+                      && request.resource.data.sender == request.auth.uid
+                      && request.resource.data.time == request.time
+                      && request.resource.data.content.size() <= 2000;
+        allow update, delete: if false; // Immutable messages in v1
+      }
+
+      // Typing indicators: owner can write, any authed user can read
+      match /typing/{uid} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+  }
+}
