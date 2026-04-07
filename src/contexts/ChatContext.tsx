@@ -60,9 +60,11 @@ function chatReducer(state: AppState, action: ChatAction): AppState {
       return { ...state, messages: [...action.messages, ...state.messages] };
 
     case 'REPLACE_OPTIMISTIC': {
-      const messages = state.messages.map((m) =>
-        m.id === action.tempId ? action.message : m
-      );
+      // Filter out any real copy already appended by onSnapshot before replacing
+      // the optimistic placeholder, preventing duplicates from the race condition.
+      const messages = state.messages
+        .filter((m) => m.id !== action.message.id)
+        .map((m) => m.id === action.tempId ? action.message : m);
       return { ...state, messages };
     }
 

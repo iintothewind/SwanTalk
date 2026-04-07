@@ -23,6 +23,7 @@ function docToMessage(doc: QueryDocumentSnapshot<DocumentData>): Message {
     sender: data.sender,
     senderName: data.senderName,
     senderPhoto: data.senderPhoto,
+    senderEmail: data.senderEmail ?? undefined,
     content: data.content,
     time: data.time,
   };
@@ -32,6 +33,7 @@ export function useMessages(topicId: string | null) {
   const { dispatch, state } = useChatContext();
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const oldestDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const isInitialSnapshot = useRef(true);
 
   useEffect(() => {
     if (!topicId) return;
@@ -42,6 +44,7 @@ export function useMessages(topicId: string | null) {
       unsubscribeRef.current = null;
     }
 
+    isInitialSnapshot.current = true;
     markTopicVisited(topicId);
 
     const messagesRef = collection(db, 'topics', topicId, 'messages');
@@ -52,10 +55,8 @@ export function useMessages(topicId: string | null) {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const changes = snapshot.docChanges();
-      const isInitial = changes.every((c) => c.type === 'added');
-
-      if (isInitial) {
+      if (isInitialSnapshot.current) {
+        isInitialSnapshot.current = false;
         // Initial load: reverse for chronological order
         const docs = [...snapshot.docs].reverse();
         oldestDocRef.current = docs[0] ?? null;
@@ -63,7 +64,7 @@ export function useMessages(topicId: string | null) {
         dispatch({ type: 'SET_MESSAGES', messages });
       } else {
         // Real-time updates: only handle new messages
-        changes.forEach((change) => {
+        snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
             const message = docToMessage(change.doc);
             dispatch({ type: 'APPEND_MESSAGE', message });

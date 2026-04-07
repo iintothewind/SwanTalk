@@ -39,7 +39,10 @@ export function Message({ message }: MessageProps) {
       <div className={`max-w-[75%] flex flex-col gap-0.5 ${isOwn ? 'items-end' : 'items-start'}`}>
         <div className="flex items-baseline gap-2">
           {!isOwn && (
-            <span className="text-xs font-semibold text-gray-600">
+            <span
+              className="text-xs font-semibold text-gray-600 cursor-default"
+              title={message.senderEmail}
+            >
               {message.senderName}
             </span>
           )}
@@ -53,7 +56,7 @@ export function Message({ message }: MessageProps) {
         <div
           className={`px-3 py-2 rounded-2xl text-sm leading-relaxed ${
             isOwn
-              ? `bg-indigo-600 text-white rounded-tr-sm ${isOptimistic ? 'opacity-60' : ''}`
+              ? `bg-gray-500 text-white rounded-tr-sm ${isOptimistic ? 'opacity-60' : ''}`
               : 'bg-gray-100 text-gray-800 rounded-tl-sm'
           }`}
         >

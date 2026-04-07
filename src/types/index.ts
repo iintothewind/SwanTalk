@@ -4,6 +4,7 @@ export interface User {
   uid: string;
   displayName: string;
   photoURL: string;
+  email?: string;
 }
 
 export interface Topic {
@@ -18,6 +19,7 @@ export interface Message {
   sender: string;
   senderName: string;
   senderPhoto: string;
+  senderEmail?: string;
   content: string;
   time: Timestamp | null;
   isOptimistic?: boolean;

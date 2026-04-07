@@ -54,10 +54,10 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-async function writeUserProfile(uid: string, displayName: string, photoURL: string) {
+async function writeUserProfile(uid: string, displayName: string, photoURL: string, email?: string) {
   await setDoc(
     doc(db, 'users', uid),
-    { displayName, photoURL, lastSeen: serverTimestamp() },
+    { displayName, photoURL, email: email ?? null, lastSeen: serverTimestamp() },
     { merge: true }
   ).catch(console.error);
 }
@@ -85,11 +85,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           firebaseUser.email?.split('@')[0] ??
           'User';
         const photoURL = firebaseUser.photoURL ?? '';
+        const email = firebaseUser.email ?? undefined;
 
-        setUser({ uid: firebaseUser.uid, displayName, photoURL });
+        setUser({ uid: firebaseUser.uid, displayName, photoURL, email });
 
-        // Always refresh photo + lastSeen in Firestore on every login/reload
-        await writeUserProfile(firebaseUser.uid, displayName, photoURL);
+        // Always refresh displayName, photoURL, email + lastSeen in Firestore on every login/reload
+        await writeUserProfile(firebaseUser.uid, displayName, photoURL, email);
       } else {
         setUser(null);
       }
@@ -113,8 +114,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, displayName: string) => {
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(credential.user, { displayName });
-    await writeUserProfile(credential.user.uid, displayName, '');
-    setUser({ uid: credential.user.uid, displayName, photoURL: '' });
+    await writeUserProfile(credential.user.uid, displayName, '', email);
+    setUser({ uid: credential.user.uid, displayName, photoURL: '', email });
     recordLoginTime();
   };
 

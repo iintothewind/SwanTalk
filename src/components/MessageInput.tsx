@@ -45,6 +45,7 @@ export function MessageInput() {
         sender: user.uid,
         senderName: user.displayName,
         senderPhoto: user.photoURL,
+        senderEmail: user.email,
         content: trimmed,
         time: null,
         isOptimistic: true,
@@ -58,6 +59,7 @@ export function MessageInput() {
           sender: user.uid,
           senderName: user.displayName,
           senderPhoto: user.photoURL,
+          senderEmail: user.email ?? null,
           content: trimmed,
           time: serverTimestamp(),
         }
@@ -72,6 +74,7 @@ export function MessageInput() {
           sender: user.uid,
           senderName: user.displayName,
           senderPhoto: user.photoURL,
+          senderEmail: user.email,
           content: trimmed,
           time: null, // Will be updated by onSnapshot
         },

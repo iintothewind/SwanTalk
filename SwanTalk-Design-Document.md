@@ -54,8 +54,9 @@ SwanTalk is a zero-cost, real-time instant messaging web application for up to 1
 
 ```
 /users/{uid}
-    displayName : string        # From Google profile
-    photoURL    : string        # From Google profile
+    displayName : string        # From Google/auth profile
+    email       : string | null # From Google/auth profile
+    photoURL    : string        # From Google/auth profile
     lastSeen    : Timestamp     # Updated on activity
 
 /topics/{topicId}
@@ -67,6 +68,7 @@ SwanTalk is a zero-cost, real-time instant messaging web application for up to 1
     sender      : string        # UID (FK to /users)
     senderName  : string        # Denormalized display name (for read perf)
     senderPhoto : string        # Denormalized photo URL
+    senderEmail : string | null # Denormalized email (shown on hover)
     content     : string        # Markdown-formatted body
     time        : Timestamp     # serverTimestamp() — canonical ordering field
 
@@ -77,8 +79,8 @@ SwanTalk is a zero-cost, real-time instant messaging web application for up to 1
 
 ### 3.2 Design Decisions
 
-**Why denormalize `senderName` / `senderPhoto` onto each message?**  
-Avoids a secondary read per message. At 10 users the staleness risk is negligible. If a user changes their Google profile picture, old messages keep the old avatar — acceptable for v1.
+**Why denormalize `senderName` / `senderPhoto` / `senderEmail` onto each message?**  
+Avoids a secondary read per message. At 10 users the staleness risk is negligible. If a user changes their Google profile picture or display name, old messages keep the old values — acceptable for v1. `senderEmail` is included so the UI can show the sender's email on hover without an extra Firestore lookup.
 
 **Why a `/typing/{uid}` sub-collection instead of a single document?**  
 Each user writes only their own document, avoiding write contention. The client deletes the document (or lets it expire) when the user stops typing.
@@ -104,7 +106,7 @@ This is a single-field index on `time`, so Firestore creates it automatically. N
 
 1. On app load, call `onAuthStateChanged()`.
 2. If no user → show a full-screen sign-in page with a "Sign in with Google" button.
-3. On sign-in success → write/update the `/users/{uid}` document with `displayName`, `photoURL`, and `lastSeen`.
+3. On sign-in success → write/update the `/users/{uid}` document with `displayName`, `email`, `photoURL`, and `lastSeen`.
 4. Redirect to the main chat view.
 
 ### 4.2 Session Handling
@@ -168,14 +170,14 @@ service cloud.firestore {
   ├── <AuthGate>                      # Shows SignIn or main app
   │   ├── <SignInScreen>              # Google sign-in button
   │   └── <ChatLayout>               # Main authenticated view
-  │       ├── <TopBar>               # App name, user avatar, sign-out, language toggle
+  │       ├── <TopBar>               # App name, user avatar (hover shows email), sign-out, language toggle
   │       ├── <Sidebar>              # Desktop only: topic list + "New Topic" button
   │       │   ├── <TopicItem>        # Single topic row with unread badge
   │       │   └── <NewTopicForm>     # Inline input to create a topic
   │       ├── <TopicBar>             # Mobile only: horizontal scrollable topic pills
   │       └── <ChatPanel>            # Active topic's chat
   │           ├── <MessageList>      # Scrollable message feed
-  │           │   └── <Message>      # Single message bubble w/ Markdown
+  │           │   └── <Message>      # Single message bubble w/ Markdown; hover sender name shows email
   │           ├── <TypingIndicator>  # "Alice is typing..."
   │           └── <MessageInput>     # Text area + send button + char counter
 ```
@@ -188,6 +190,7 @@ interface AppState {
     uid: string;
     displayName: string;
     photoURL: string;
+    email?: string;
   } | null;
 
   topics: Topic[];                 // All topic documents

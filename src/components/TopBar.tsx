@@ -57,7 +57,10 @@ export function TopBar() {
                 {user?.displayName?.[0]?.toUpperCase() ?? '?'}
               </div>
             )}
-            <span className="text-sm text-gray-700 hidden sm:block">
+            <span
+              className="text-sm text-gray-700 hidden sm:block cursor-default"
+              title={user?.email}
+            >
               {user?.displayName}
             </span>
           </button>

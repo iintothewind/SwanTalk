@@ -1,7 +1,6 @@
 {
   "projects": {
-    "default": "swantalk",
-    "swantalk": "swan-proj"
+    "default": "swan-proj"
   },
   "targets": {},
   "etags": {}
