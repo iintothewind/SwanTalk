@@ -10,8 +10,11 @@ export interface User {
 export interface Topic {
   id: string;
   name: string;
-  createdBy: string;
-  createdAt: Timestamp | null;
+  owner: string;
+  createTime: Timestamp | null;
+  access: 'public' | 'private';
+  status: 'active' | 'archived';
+  visibility: string[];
 }
 
 export interface Message {

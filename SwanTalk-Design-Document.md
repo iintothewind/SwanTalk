@@ -1,6 +1,6 @@
 # SwanTalk — Design Document
 
-**Version:** 1.1  
+**Version:** 1.2  
 **Date:** April 6, 2026  
 **Status:** Ready for Implementation
 
@@ -14,6 +14,7 @@ SwanTalk is a zero-cost, real-time instant messaging web application for up to 1
 
 - Real-time text chat with sub-second delivery across all connected clients.
 - Topic-based message isolation so conversations stay organized.
+- Public and private topics with server-enforced visibility control.
 - Markdown rendering for rich content (images via URL, links, code blocks).
 - Responsive UI that works on desktop and mobile browsers.
 - Fully offline-capable on refresh via Firestore IndexedDB persistence.
@@ -54,15 +55,20 @@ SwanTalk is a zero-cost, real-time instant messaging web application for up to 1
 
 ```
 /users/{uid}
-    displayName : string        # From Google/auth profile
-    email       : string | null # From Google/auth profile
-    photoURL    : string        # From Google/auth profile
+    displayName : string        # Synced from auth profile on every login
+    email       : string | null # Synced from auth profile on every login
+    photoURL    : string        # Synced from auth profile on every login
     lastSeen    : Timestamp     # Updated on activity
 
 /topics/{topicId}
-    name        : string        # Display name, e.g. "Development"
-    createdBy   : string        # UID of creator
-    createdAt   : Timestamp     # serverTimestamp()
+    name        : string        # Display name, e.g. "development"
+    owner       : string        # UID of creator (authority subject)
+    createTime  : Timestamp     # serverTimestamp()
+    access      : "public" | "private"
+    status      : "active" | "archived"   # reserved for soft-delete
+    visibility  : array<string> # UIDs who can read this topic (≤ 10)
+                                # public  → all registered users
+                                # private → owner + explicitly selected users
 
 /topics/{topicId}/messages/{messageId}
     sender      : string        # UID (FK to /users)
@@ -85,8 +91,14 @@ Avoids a secondary read per message. At 10 users the staleness risk is negligibl
 **Why a `/typing/{uid}` sub-collection instead of a single document?**  
 Each user writes only their own document, avoiding write contention. The client deletes the document (or lets it expire) when the user stops typing.
 
-**Why `topicId` is a slugified string (e.g. `development`) rather than an auto-ID?**  
-Human-readable paths make Firestore console debugging easier and allow future deep-linking (`/topic/development`).
+**Why is the private topic's document ID forced to equal the owner's UID?**  
+It enforces the one-private-topic-per-user limit at the database level — a second create attempt for the same ID is rejected by Firestore. The security rule `topicId == request.auth.uid` makes this server-side and unforgeable.
+
+**Why use two separate `onSnapshot` queries for topics instead of one?**  
+A single query with `where("visibility","array-contains",uid)` requires every user's UID to be pre-inserted into public topics' `visibility` arrays. Two queries — one for `access == 'public'`, one for private topics with `array-contains` — avoid that write overhead entirely and keep public topic discovery free of per-user bookkeeping.
+
+**Why `topicId` is a user-typed string (e.g. `development`) rather than an auto-ID?**  
+Human-readable paths make Firestore console debugging easier. For private topics the ID equals the owner's UID, which also serves as the uniqueness constraint.
 
 ### 3.3 Indexes
 
@@ -105,9 +117,9 @@ This is a single-field index on `time`, so Firestore creates it automatically. N
 ### 4.1 Flow
 
 1. On app load, call `onAuthStateChanged()`.
-2. If no user → show a full-screen sign-in page with a "Sign in with Google" button.
+2. If no user → show a full-screen sign-in page with "Continue with Google" and email/password options.
 3. On sign-in success → write/update the `/users/{uid}` document with `displayName`, `email`, `photoURL`, and `lastSeen`.
-4. Redirect to the main chat view.
+4. Render the main chat view. Public topics are discovered via a separate `access == 'public'` query — no per-user enrollment needed.
 
 ### 4.2 Session Handling
 
@@ -124,33 +136,64 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // User profiles: owner can write, any authed user can read
+    // Helper: true if the requesting user can read this topic.
+    // resource == null guard handles existence-check reads on non-existent docs.
+    function canAccessTopic(topicData) {
+      return topicData.access == 'public' ||
+             (request.auth != null && request.auth.uid in topicData.visibility);
+    }
+
     match /users/{uid} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // Topics: any authed user can read and create
     match /topics/{topicId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
-                    && request.resource.data.keys().hasAll(['name', 'createdBy', 'createdAt'])
-                    && request.resource.data.createdBy == request.auth.uid;
-      allow update, delete: if false; // No edits or deletions in v1
+      // Read: public topics are visible to any authenticated user;
+      // private topics only to users in visibility.
+      // resource == null when the document doesn't exist (existence checks before create).
+      allow read: if request.auth != null
+                  && (resource == null || canAccessTopic(resource.data));
 
-      // Messages: any authed user can read and create
+      // Create: validated schema; private topic ID must equal owner UID
+      // (enforces the one-private-topic-per-user limit at the DB level).
+      allow create: if request.auth != null
+                    && request.resource.data.owner == request.auth.uid
+                    && request.resource.data.visibility is list
+                    && request.auth.uid in request.resource.data.visibility
+                    && (request.resource.data.access != 'private'
+                        || topicId == request.auth.uid);
+
+      // Update: private topic owner may rename or change the visibility list
+      // (≤ 10 members).
+      allow update: if request.auth != null
+                    && resource.data.access == 'private'
+                    && request.auth.uid == resource.data.owner
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['visibility', 'name'])
+                    && request.resource.data.visibility.size() <= 10;
+
+      allow delete: if false;
+
+      // Messages: only users who can access the parent topic may read or write.
       match /messages/{messageId} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null
+                    && canAccessTopic(
+                         get(/databases/$(database)/documents/topics/$(topicId)).data);
         allow create: if request.auth != null
                       && request.resource.data.sender == request.auth.uid
+                      && canAccessTopic(
+                           get(/databases/$(database)/documents/topics/$(topicId)).data)
                       && request.resource.data.time == request.time
                       && request.resource.data.content.size() <= 2000;
-        allow update, delete: if false; // Immutable messages in v1
+        allow update, delete: if false;
       }
 
-      // Typing indicators: owner can write, any authed user can read
+      // Typing indicators: only topic members can read; only own doc can be written.
       match /typing/{uid} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null
+                    && canAccessTopic(
+                         get(/databases/$(database)/documents/topics/$(topicId)).data);
         allow write: if request.auth != null && request.auth.uid == uid;
       }
     }
@@ -168,16 +211,17 @@ service cloud.firestore {
 <App>
   ├── <I18nProvider>                  # react-i18next provider
   ├── <AuthGate>                      # Shows SignIn or main app
-  │   ├── <SignInScreen>              # Google sign-in button
+  │   ├── <SignInScreen>              # Google + email/password sign-in
   │   └── <ChatLayout>               # Main authenticated view
   │       ├── <TopBar>               # App name, user avatar (hover shows email), sign-out, language toggle
   │       ├── <Sidebar>              # Desktop only: topic list + "New Topic" button
-  │       │   ├── <TopicItem>        # Single topic row with unread badge
-  │       │   └── <NewTopicForm>     # Inline input to create a topic
-  │       ├── <TopicBar>             # Mobile only: horizontal scrollable topic pills
+  │       │   ├── <TopicItem>        # Topic row; gear icon (owner of private topic) opens ManageMembersModal
+  │       │   ├── <NewTopicForm>     # Create public or private topic; member picker for private
+  │       │   └── <ManageMembersModal> # Rename + manage visibility for own private topic
+  │       ├── <TopicBar>             # Mobile only: scrollable topic pills; gear on active private topic
   │       └── <ChatPanel>            # Active topic's chat
-  │           ├── <MessageList>      # Scrollable message feed
-  │           │   └── <Message>      # Single message bubble w/ Markdown; hover sender name shows email
+  │           ├── <MessageList>      # Scrollable feed; jump-to-top / jump-to-bottom buttons
+  │           │   └── <Message>      # Single bubble w/ Markdown; hover sender name shows email
   │           ├── <TypingIndicator>  # "Alice is typing..."
   │           └── <MessageInput>     # Text area + send button + char counter
 ```
@@ -213,8 +257,8 @@ interface AppState {
 | Hook | Responsibility |
 |---|---|
 | `useAuth()` | Wraps `onAuthStateChanged`, exposes `user`, `signIn()`, `signOut()` |
-| `useTopics()` | `onSnapshot` on `/topics` collection, returns live topic list |
-| `useMessages(topicId)` | Loads last 50 from cache, syncs delta, subscribes to real-time updates |
+| `useTopics()` | Two parallel `onSnapshot` queries (public + private); merges and sorts client-side; dispatches `CLEAR_ACTIVE_IF_GONE` when active topic disappears |
+| `useMessages(topicId)` | Cache-first load, real-time delta sync, load-more; uses `isInitialSnapshot` ref to prevent duplicate messages from optimistic writes |
 | `useTyping(topicId)` | Writes/deletes own typing doc; subscribes to others' typing docs |
 | `useUnread()` | Tracks `lastReadTime` per topic in localStorage, compares to latest message `time` |
 
@@ -344,20 +388,46 @@ Supported Markdown features: bold, italic, strikethrough, inline code, fenced co
 ### 7.6 Topic Creation
 
 ```
-1. User clicks "+ New Topic" in the sidebar.
-2. An inline text input appears.
-3. User types a name (e.g. "Design Review") and presses Enter.
-4. Client generates topicId by slugifying the name:
-     "Design Review" → "design-review"
-   If the slug already exists, append a short random suffix.
-5. Write:
-     setDoc(doc(db, 'topics', topicId), {
-       name: "Design Review",
-       createdBy: auth.currentUser.uid,
-       createdAt: serverTimestamp()
-     })
-6. Auto-select the new topic.
+1. User clicks "+ New Topic" in the sidebar (or [+] in TopicBar on mobile).
+2. NewTopicForm expands inline.
+3. User types a name (letters, numbers, underscores only; max 20 chars).
+4. User selects access: Public (default) or Private (🔒).
+   - Private is disabled if the user already owns a private topic.
+5. For Private: a member picker loads all registered users (format: displayName(email)).
+   The owner is pre-checked and cannot be removed. Up to 10 members total.
+6. On submit:
+   - Public:  topicId = name; visibility = [owner.uid]
+   - Private: topicId = owner.uid (enforces one-per-user limit at DB level)
+              visibility = [owner.uid, ...selectedUIDs]
+   setDoc(doc(db, 'topics', topicId), {
+     name, owner: uid, createTime: serverTimestamp(),
+     access, status: 'active', visibility
+   })
+7. Auto-select the new topic.
 ```
+
+### 7.7 Private Topic Management
+
+The owner of a private topic can open the **Manage Members** modal via the gear icon on the topic row (desktop: hover to reveal; mobile: gear appears on the active pill).
+
+The modal allows:
+- **Rename** the topic (same character rules as creation).
+- **Add or remove members** (owner is always included; max 10 total).
+
+On save, a single `updateDoc` call writes both `name` and `visibility`. The security rule restricts updates to `affectedKeys().hasOnly(['visibility', 'name'])` and only permits the topic owner.
+
+### 7.8 Message Panel Synchronisation
+
+When the topic list updates (e.g. a private topic is removed from the user's visibility), `useTopics` dispatches `CLEAR_ACTIVE_IF_GONE`. If the currently active topic is no longer in the list, the reducer clears `activeTopicId`, `messages`, and `typingUsers`, returning the message panel to its empty state.
+
+### 7.9 Jump Navigation
+
+`MessageList` shows floating action buttons positioned inside the scroll container:
+
+- **↑ (jump to top)** — appears when scrolled more than 80 px from the top.
+- **↓ (jump to bottom)** — appears when more than 80 px of content is below the viewport.
+
+Both buttons re-apply the scroll target after each image's `load` event, so late-loading images cannot leave the panel partially scrolled.
 
 ---
 
@@ -621,29 +691,32 @@ src/
 │
 ├── contexts/
 │   ├── AuthContext.tsx          # Auth state provider + useAuth hook
-│   └── ChatContext.tsx          # Topics, messages, typing, unread state
+│   └── ChatContext.tsx          # Topics, messages, typing, unread state + CLEAR_ACTIVE_IF_GONE
 │
 ├── hooks/
-│   ├── useTopics.ts            # Real-time topic list subscription
-│   ├── useMessages.ts          # Smart sync: cache-first + real-time + eviction
+│   ├── useTopics.ts            # Two-query topic subscription (public + private); CLEAR_ACTIVE_IF_GONE
+│   ├── useMessages.ts          # Cache-first + real-time sync; isInitialSnapshot dedup
 │   ├── useTyping.ts            # Typing indicator read/write
 │   └── useUnread.ts            # Unread count tracking
 │
 ├── components/
-│   ├── SignInScreen.tsx         # Google sign-in page
-│   ├── TopBar.tsx              # App header, user menu, language toggle
+│   ├── SignInScreen.tsx         # Google + email/password sign-in page
+│   ├── TopBar.tsx              # App header, user menu (hover = email), language toggle
 │   ├── Sidebar.tsx             # Desktop: topic list + new topic form
-│   ├── TopicBar.tsx            # Mobile: horizontal scrollable topic pills
-│   ├── TopicItem.tsx           # Single topic row (used by Sidebar)
+│   ├── TopicBar.tsx            # Mobile: scrollable topic pills + gear for private topic owner
+│   ├── TopicItem.tsx           # Topic row; gear icon reveals ManageMembersModal for owner
+│   ├── NewTopicForm.tsx        # Create public or private topic; member picker (name(email) format)
+│   ├── ManageMembersModal.tsx  # Rename + manage visibility for own private topic
 │   ├── ChatPanel.tsx           # Message list + input container
-│   ├── MessageList.tsx         # Scrollable feed with load-more
-│   ├── Message.tsx             # Single message with Markdown render
+│   ├── MessageList.tsx         # Scrollable feed; jump-to-top / jump-to-bottom buttons
+│   ├── Message.tsx             # Single bubble w/ Markdown; hover sender name = email
 │   ├── TypingIndicator.tsx     # "X is typing..." bar
 │   └── MessageInput.tsx        # Textarea + send button + char counter
 │
 ├── lib/
 │   ├── markdown.tsx            # ReactMarkdown config + custom renderers
 │   ├── slug.ts                 # Topic name → slug utility
+│   ├── time.ts                 # Message timestamp formatting
 │   └── cacheEviction.ts        # IndexedDB cache cleanup logic
 │
 ├── types/

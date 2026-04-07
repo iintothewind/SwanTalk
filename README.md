@@ -9,13 +9,15 @@ Built entirely on the Firebase Spark (free) plan — zero hosting cost.
 ## Features
 
 - **Google Sign-In and email/password auth** — session auto-restored on revisit; expires after 7 days of inactivity
-- **Topic-based channels** — create named topics; each topic is an isolated message feed
+- **Public and private topics** — public topics are visible to all users; private topics are visible only to members chosen by the owner; enforced server-side by Firestore Security Rules
+- **Private topic management** — owner can rename their private topic and add/remove members (up to 10) at any time via the Manage Members modal
 - **Real-time messaging** — Firestore `onSnapshot` delivers messages to all connected clients instantly
 - **Markdown rendering** — bold, italic, strikethrough, inline code, fenced code blocks with syntax highlighting, links, inline images, GFM tables, task lists, blockquotes
 - **Typing indicators** — shows who is currently typing, with debounce and stale-doc cleanup
 - **Unread badges** — numeric badge per topic for messages received while away
 - **Offline support** — Firestore IndexedDB persistence; the app loads and reads from cache with no network
-- **Email on hover** — hover over any sender name to see their email address
+- **Email on hover** — hover over any sender name or your own name in the top bar to see the email address
+- **Jump navigation** — floating buttons to jump instantly to the top or bottom of the message feed, with image-aware re-anchoring
 - **Responsive layout** — two-column sidebar on desktop; horizontal topic pill bar on mobile
 - **i18n** — English and Chinese, switchable in the top bar; preference persisted to `localStorage`
 - **Client-side cache eviction** — messages older than 7 days are pruned from IndexedDB on startup
@@ -66,10 +68,12 @@ src/
 │   ├── SignInScreen.tsx         # Google + email/password sign-in page
 │   ├── TopBar.tsx              # App header, user name (hover = email), language toggle
 │   ├── Sidebar.tsx             # Desktop: topic list + new topic form
-│   ├── TopicBar.tsx            # Mobile: horizontal scrollable topic pills
-│   ├── TopicItem.tsx           # Single topic row with unread badge
+│   ├── TopicBar.tsx            # Mobile: scrollable pills + gear for private topic owner
+│   ├── TopicItem.tsx           # Topic row; gear icon opens ManageMembersModal for owner
+│   ├── NewTopicForm.tsx        # Create public or private topic; member picker
+│   ├── ManageMembersModal.tsx  # Rename + manage visibility for own private topic
 │   ├── ChatPanel.tsx           # Message list + input container
-│   ├── MessageList.tsx         # Scrollable feed with load-more
+│   ├── MessageList.tsx         # Scrollable feed; jump-to-top / jump-to-bottom buttons
 │   ├── Message.tsx             # Single bubble — Markdown render, sender name hover = email
 │   ├── TypingIndicator.tsx     # "X is typing..." bar
 │   └── MessageInput.tsx        # Textarea + send button + character counter
@@ -119,41 +123,10 @@ Copy these values from **Firebase console → Project settings → Your apps →
 
 ### 3. Deploy Firestore security rules
 
-Paste the rules below into **Firebase console → Firestore → Rules** (or use `firebase deploy --only firestore:rules`):
+The rules are stored in [`firestore.rules`](firestore.rules). Deploy them with:
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-
-    match /users/{uid} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == uid;
-    }
-
-    match /topics/{topicId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
-                    && request.resource.data.keys().hasAll(['name', 'createdBy', 'createdAt'])
-                    && request.resource.data.createdBy == request.auth.uid;
-      allow update, delete: if false;
-
-      match /messages/{messageId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null
-                      && request.resource.data.sender == request.auth.uid
-                      && request.resource.data.time == request.time
-                      && request.resource.data.content.size() <= 2000;
-        allow update, delete: if false;
-      }
-
-      match /typing/{uid} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null && request.auth.uid == uid;
-      }
-    }
-  }
-}
+```bash
+firebase deploy --only firestore:rules
 ```
 
 ### 4. Run locally
@@ -198,10 +171,15 @@ All tunable constants live in [`src/config.ts`](src/config.ts). Edit this file t
     photoURL    : string        # Synced from auth profile on every login
     lastSeen    : Timestamp
 
-/topics/{topicId}               # topicId is a slug, e.g. "design-review"
+/topics/{topicId}
     name        : string
-    createdBy   : string        # UID
-    createdAt   : Timestamp
+    owner       : string        # UID of creator
+    createTime  : Timestamp
+    access      : "public" | "private"
+    status      : "active" | "archived"
+    visibility  : array<string> # UIDs who can read this topic (≤ 10)
+                                # public  → [owner] at create; all users see it via access query
+                                # private → owner + selected members
 
 /topics/{topicId}/messages/{messageId}
     sender      : string        # UID

@@ -87,10 +87,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const photoURL = firebaseUser.photoURL ?? '';
         const email = firebaseUser.email ?? undefined;
 
-        setUser({ uid: firebaseUser.uid, displayName, photoURL, email });
-
         // Always refresh displayName, photoURL, email + lastSeen in Firestore on every login/reload
         await writeUserProfile(firebaseUser.uid, displayName, photoURL, email);
+
+        setUser({ uid: firebaseUser.uid, displayName, photoURL, email });
       } else {
         setUser(null);
       }

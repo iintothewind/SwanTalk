@@ -10,6 +10,7 @@ import type { AppState, Topic, Message, TypingUser } from '../types';
 type ChatAction =
   | { type: 'SET_TOPICS'; topics: Topic[] }
   | { type: 'SET_ACTIVE_TOPIC'; topicId: string | null }
+  | { type: 'CLEAR_ACTIVE_IF_GONE'; topicIds: Set<string> }
   | { type: 'SET_MESSAGES'; messages: Message[] }
   | { type: 'APPEND_MESSAGE'; message: Message }
   | { type: 'PREPEND_MESSAGES'; messages: Message[] }
@@ -45,6 +46,12 @@ function chatReducer(state: AppState, action: ChatAction): AppState {
         messages: [],
         typingUsers: [],
       };
+
+    case 'CLEAR_ACTIVE_IF_GONE':
+      if (state.activeTopicId && !action.topicIds.has(state.activeTopicId)) {
+        return { ...state, activeTopicId: null, messages: [], typingUsers: [] };
+      }
+      return state;
 
     case 'SET_MESSAGES':
       return { ...state, messages: action.messages };

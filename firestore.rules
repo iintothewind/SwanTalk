@@ -2,33 +2,54 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // User profiles: owner can write, any authed user can read
+    // 辅助函数：判断用户是否有权访问
+    function canAccessTopic(topicData) {
+      return topicData.access == 'public' ||
+             (request.auth != null && request.auth.uid in topicData.visibility);
+    }
+
     match /users/{uid} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // Topics: any authed user can read and create
     match /topics/{topicId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
-                    && request.resource.data.keys().hasAll(['name', 'createdBy', 'createdAt'])
-                    && request.resource.data.createdBy == request.auth.uid;
-      allow update, delete: if false; // No edits or deletions in v1
+      // 读取：公共话题登录可见；私有话题名单内可见
+      // resource == null when the document doesn't exist (e.g. existence checks before create)
+      allow read: if request.auth != null && (resource == null || canAccessTopic(resource.data));
 
-      // Messages: any authed user can read and create
+      // 创建：私有话题 ID 绑定 UID
+      allow create: if request.auth != null
+                    && request.resource.data.owner == request.auth.uid
+                    && request.resource.data.visibility is list
+                    && request.auth.uid in request.resource.data.visibility
+                    && (request.resource.data.access != 'private' || topicId == request.auth.uid);
+
+      // 更新：私有话题仅限 Owner 管理名单或改名
+      allow update: if request.auth != null
+                    && resource.data.access == 'private'
+                    && request.auth.uid == resource.data.owner
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['visibility', 'name'])
+                    && request.resource.data.visibility.size() <= 10;
+
+      allow delete: if false;
+
       match /messages/{messageId} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null && canAccessTopic(get(/databases/$(database)/documents/topics/$(topicId)).data);
+
+        // 发送消息：只要有权限访问 Topic 就能发
         allow create: if request.auth != null
                       && request.resource.data.sender == request.auth.uid
+                      && canAccessTopic(get(/databases/$(database)/documents/topics/$(topicId)).data)
                       && request.resource.data.time == request.time
                       && request.resource.data.content.size() <= 2000;
-        allow update, delete: if false; // Immutable messages in v1
+
+        allow update, delete: if false;
       }
 
-      // Typing indicators: owner can write, any authed user can read
       match /typing/{uid} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null && canAccessTopic(get(/databases/$(database)/documents/topics/$(topicId)).data);
         allow write: if request.auth != null && request.auth.uid == uid;
       }
     }
