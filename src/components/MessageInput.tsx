@@ -128,6 +128,12 @@ export function MessageInput() {
             el.style.height = 'auto';
             el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
           }}
+          onBlur={() => {
+            // When the virtual keyboard dismisses on mobile, some browsers leave
+            // the window scrolled down. Reset after a brief delay so the browser
+            // has time to resize the viewport before we correct the scroll.
+            setTimeout(() => window.scrollTo(0, 0), 100);
+          }}
         />
         <button
           onClick={sendMessage}
