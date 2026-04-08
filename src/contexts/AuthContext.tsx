@@ -19,6 +19,7 @@ import {
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { APP_CONFIG } from '../config';
+import { requestNotificationPermission } from '../lib/notifications';
 import type { User } from '../types';
 
 const SESSION_KEY = 'swan-talk-login-time';
@@ -104,11 +105,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
     recordLoginTime();
+    requestNotificationPermission();
   };
 
   const signIn = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
     recordLoginTime();
+    requestNotificationPermission();
   };
 
   const signUp = async (email: string, password: string, displayName: string) => {
@@ -117,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await writeUserProfile(credential.user.uid, displayName, '', email);
     setUser({ uid: credential.user.uid, displayName, photoURL: '', email });
     recordLoginTime();
+    requestNotificationPermission();
   };
 
   const signOut = async () => {

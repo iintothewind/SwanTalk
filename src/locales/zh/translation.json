@@ -56,6 +56,8 @@
     "many": "{{names}} 正在输入..."
   },
   "settings": {
-    "language": "语言"
+    "language": "语言",
+    "notifMute": "关闭通知",
+    "notifUnmute": "开启通知"
   }
 }

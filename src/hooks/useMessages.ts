@@ -12,7 +12,9 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useChatContext } from '../contexts/ChatContext';
+import { useAuth } from '../contexts/AuthContext';
 import { markTopicVisited } from '../lib/cacheEviction';
+import { fireNotification } from '../lib/notifications';
 import { APP_CONFIG } from '../config';
 import type { Message } from '../types';
 
@@ -31,6 +33,7 @@ function docToMessage(doc: QueryDocumentSnapshot<DocumentData>): Message {
 
 export function useMessages(topicId: string | null) {
   const { dispatch, state } = useChatContext();
+  const { user } = useAuth();
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const oldestDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
   const isInitialSnapshot = useRef(true);
@@ -68,6 +71,17 @@ export function useMessages(topicId: string | null) {
           if (change.type === 'added') {
             const message = docToMessage(change.doc);
             dispatch({ type: 'APPEND_MESSAGE', message });
+
+            // Notify if the message is from someone else and tab is not focused
+            if (message.sender !== user?.uid) {
+              const topic = state.topics.find((t) => t.id === topicId);
+              const topicLabel = topic ? `#${topic.name}` : 'SwanTalk';
+              fireNotification(
+                `${message.senderName} · ${topicLabel}`,
+                message.content,
+                message.senderPhoto || undefined,
+              );
+            }
           }
         });
       }
