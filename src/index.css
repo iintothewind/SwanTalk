@@ -51,6 +51,32 @@ body {
   padding: 4px 8px;
 }
 
+/* Own-message bubble: light blue background with dark text */
+.own-bubble {
+  background-color: #CFECF3;
+  color: #1e293b;
+}
+.own-bubble .prose { color: #1e293b; }
+.own-bubble .prose strong { color: #0f172a; }
+.own-bubble .prose em { color: #334155; }
+.own-bubble .prose a { color: #0369a1; text-decoration: underline; }
+.own-bubble .prose a:hover { color: #0284c7; }
+.own-bubble .prose code { background: rgba(0,0,0,0.08); color: #0f172a; border-radius: 4px; padding: 1px 5px; }
+.own-bubble .prose pre { background: rgba(0,0,0,0.12); border-radius: 8px; padding: 10px 12px; }
+.own-bubble .prose pre code { background: transparent; padding: 0; color: #1e293b; }
+.own-bubble .prose blockquote { border-left-color: #94a3b8; color: #475569; }
+.own-bubble .prose h1,
+.own-bubble .prose h2,
+.own-bubble .prose h3 { color: #0f172a; }
+.own-bubble .prose ul,
+.own-bubble .prose ol { color: #1e293b; }
+.own-bubble .prose li::marker { color: #64748b; }
+.own-bubble .prose hr { border-color: rgba(0,0,0,0.15); }
+.own-bubble .prose table { color: #1e293b; }
+.own-bubble .prose th,
+.own-bubble .prose td { border-color: rgba(0,0,0,0.15); }
+.own-bubble .prose th { background: rgba(0,0,0,0.08); }
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;

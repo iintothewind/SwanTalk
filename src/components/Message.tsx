@@ -56,11 +56,11 @@ export function Message({ message }: MessageProps) {
         <div
           className={`px-3 py-2 rounded-2xl text-sm leading-relaxed ${
             isOwn
-              ? `bg-gray-500 text-white rounded-tr-sm ${isOptimistic ? 'opacity-60' : ''}`
+              ? `own-bubble rounded-tr-sm ${isOptimistic ? 'opacity-60' : ''}`
               : 'bg-gray-100 text-gray-800 rounded-tl-sm'
           }`}
         >
-          <div className={`prose prose-sm max-w-none ${isOwn ? 'prose-invert' : ''}`}>
+          <div className="prose prose-sm max-w-none">
             <MarkdownContent content={message.content} />
           </div>
         </div>
