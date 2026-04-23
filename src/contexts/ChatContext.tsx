@@ -40,6 +40,7 @@ function chatReducer(state: AppState, action: ChatAction): AppState {
       return { ...state, topics: action.topics };
 
     case 'SET_ACTIVE_TOPIC':
+      if (state.activeTopicId === action.topicId) return state;
       return {
         ...state,
         activeTopicId: action.topicId,

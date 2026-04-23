@@ -35,10 +35,12 @@ export function TopicBar() {
             const isActive = topic.id === state.activeTopicId;
             const unread = unreadCounts[topic.id] ?? 0;
             const isOwner = topic.access === 'private' && topic.owner === user?.uid;
+            const isMember = topic.access === 'private' && !isOwner && topic.visibility.includes(user?.uid ?? '');
             return (
               <div key={topic.id} className="relative flex-shrink-0 flex items-center">
                 <button
                   onClick={() => handleTopicClick(topic.id)}
+                  title={topic.ownerEmail}
                   className={`px-3 py-1 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                     isActive
                       ? 'bg-indigo-600 text-white'
@@ -63,6 +65,17 @@ export function TopicBar() {
                     </svg>
                   </button>
                 )}
+                {isMember && isActive && (
+                  <button
+                    onClick={() => setManagingTopic(topic)}
+                    className="ml-1 p-1 text-indigo-300 hover:text-white transition-colors"
+                    title={t('topic.viewMembers')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                    </svg>
+                  </button>
+                )}
               </div>
             );
           })}
@@ -77,7 +90,11 @@ export function TopicBar() {
       )}
 
       {managingTopic && (
-        <ManageMembersModal topic={managingTopic} onClose={() => setManagingTopic(null)} />
+        <ManageMembersModal
+          topic={managingTopic}
+          onClose={() => setManagingTopic(null)}
+          readOnly={managingTopic.owner !== user?.uid}
+        />
       )}
     </div>
   );

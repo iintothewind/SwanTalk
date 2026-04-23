@@ -100,6 +100,7 @@ export function NewTopicForm({ onDone }: NewTopicFormProps) {
       await setDoc(doc(db, 'topics', topicId), {
         name,
         owner: user.uid,
+        ownerEmail: user.email ?? null,
         createTime: serverTimestamp(),
         access,
         status: 'active',

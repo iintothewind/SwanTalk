@@ -11,6 +11,7 @@ export interface Topic {
   id: string;
   name: string;
   owner: string;
+  ownerEmail?: string;
   createTime: Timestamp | null;
   access: 'public' | 'private';
   status: 'active' | 'archived';
