@@ -1,15 +1,15 @@
+import { memo } from 'react';
 import { MarkdownContent } from '../lib/markdown';
 import { formatMessageTime, formatMessageTimeFull } from '../lib/time';
 import type { Message as MessageType } from '../types';
-import { useAuth } from '../contexts/AuthContext';
 
 interface MessageProps {
   message: MessageType;
+  currentUserId: string;
 }
 
-export function Message({ message }: MessageProps) {
-  const { user } = useAuth();
-  const isOwn = message.sender === user?.uid;
+export const Message = memo(function Message({ message, currentUserId }: MessageProps) {
+  const isOwn = message.sender === currentUserId;
   const isOptimistic = message.isOptimistic;
 
   const msgDate = message.time?.toDate
@@ -67,4 +67,4 @@ export function Message({ message }: MessageProps) {
       </div>
     </div>
   );
-}
+});

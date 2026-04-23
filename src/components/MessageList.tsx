@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChatContext } from '../contexts/ChatContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useMessages } from '../hooks/useMessages';
 import { Message } from './Message';
 
@@ -9,6 +10,8 @@ const SCROLL_THRESHOLD = 80; // px from edge to consider "at top/bottom"
 export function MessageList() {
   const { t } = useTranslation();
   const { state } = useChatContext();
+  const { user } = useAuth();
+  const currentUserId = user?.uid ?? '';
   const { messages, activeTopicId } = state;
   const { loadMore, hasMore } = useMessages(activeTopicId);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -102,7 +105,7 @@ export function MessageList() {
           </div>
         )}
         {messages.map((message) => (
-          <Message key={message.id} message={message} />
+          <Message key={message.id} message={message} currentUserId={currentUserId} />
         ))}
         <div ref={bottomRef} />
       </div>

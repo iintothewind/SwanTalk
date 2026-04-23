@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChatContext } from '../contexts/ChatContext';
-import { useAuth } from '../contexts/AuthContext';
 import { ManageMembersModal } from './ManageMembersModal';
 import type { Topic } from '../types';
 
@@ -9,22 +8,24 @@ interface TopicItemProps {
   topic: Topic;
   unreadCount: number;
   isActive: boolean;
-  onClick: () => void;
+  currentUserId: string;
+  onClick: (topicId: string) => void;
 }
 
-export function TopicItem({ topic, unreadCount, isActive, onClick }: TopicItemProps) {
+export const TopicItem = memo(function TopicItem({
+  topic, unreadCount, isActive, currentUserId, onClick,
+}: TopicItemProps) {
   const { t } = useTranslation();
   const { dispatch } = useChatContext();
-  const { user } = useAuth();
   const [managing, setManaging] = useState(false);
   const [viewing, setViewing] = useState(false);
 
-  const isOwner = topic.access === 'private' && topic.owner === user?.uid;
-  const isMember = topic.access === 'private' && !isOwner && topic.visibility.includes(user?.uid ?? '');
+  const isOwner = topic.access === 'private' && topic.owner === currentUserId;
+  const isMember = topic.access === 'private' && !isOwner && topic.visibility.includes(currentUserId);
 
   const handleClick = () => {
     dispatch({ type: 'SET_ACTIVE_TOPIC', topicId: topic.id });
-    onClick();
+    onClick(topic.id);
   };
 
   return (
@@ -82,4 +83,4 @@ export function TopicItem({ topic, unreadCount, isActive, onClick }: TopicItemPr
       )}
     </>
   );
-}
+});

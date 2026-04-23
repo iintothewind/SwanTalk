@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChatContext } from '../contexts/ChatContext';
+import { useAuth } from '../contexts/AuthContext';
 import { TopicItem } from './TopicItem';
 import { NewTopicForm } from './NewTopicForm';
 import { useUnread } from '../hooks/useUnread';
@@ -8,12 +9,14 @@ import { useUnread } from '../hooks/useUnread';
 export function Sidebar() {
   const { t } = useTranslation();
   const { state } = useChatContext();
+  const { user } = useAuth();
   const { unreadCounts, markRead } = useUnread();
   const [showNewForm, setShowNewForm] = useState(false);
+  const currentUserId = user?.uid ?? '';
 
-  const handleTopicClick = (topicId: string) => {
+  const handleTopicClick = useCallback((topicId: string) => {
     markRead(topicId);
-  };
+  }, [markRead]);
 
   return (
     <aside className="hidden md:flex flex-col w-[280px] border-r border-gray-200 bg-gray-50 shrink-0">
@@ -40,7 +43,8 @@ export function Sidebar() {
             topic={topic}
             isActive={topic.id === state.activeTopicId}
             unreadCount={unreadCounts[topic.id] ?? 0}
-            onClick={() => handleTopicClick(topic.id)}
+            currentUserId={currentUserId}
+            onClick={handleTopicClick}
           />
         ))}
         {state.topics.length === 0 && !showNewForm && (

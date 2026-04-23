@@ -37,6 +37,10 @@ export function useMessages(topicId: string | null) {
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const oldestDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
   const isInitialSnapshot = useRef(true);
+  // Ref so the snapshot callback always sees the latest topics without needing
+  // to be recreated (adding state to the dep array would re-subscribe on every change).
+  const topicsRef = useRef(state.topics);
+  useEffect(() => { topicsRef.current = state.topics; }, [state.topics]);
 
   useEffect(() => {
     if (!topicId) return;
@@ -74,7 +78,7 @@ export function useMessages(topicId: string | null) {
 
             // Notify if the message is from someone else and tab is not focused
             if (message.sender !== user?.uid) {
-              const topic = state.topics.find((t) => t.id === topicId);
+              const topic = topicsRef.current.find((t) => t.id === topicId);
               const topicLabel = topic ? `#${topic.name}` : 'SwanTalk';
               fireNotification(
                 `${message.senderName} · ${topicLabel}`,

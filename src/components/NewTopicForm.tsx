@@ -1,18 +1,13 @@
 import { useState, useEffect } from 'react';
-import { doc, setDoc, getDoc, getDocs, serverTimestamp, collection } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useChatContext } from '../contexts/ChatContext';
+import { loadUsers, type RegisteredUser } from '../hooks/useUsers';
 import { APP_CONFIG } from '../config';
 
 const VALID_PATTERN = /^[a-zA-Z0-9_]*$/;
-
-interface RegisteredUser {
-  uid: string;
-  displayName: string;
-  email?: string;
-}
 
 interface NewTopicFormProps {
   onDone?: () => void;
@@ -36,17 +31,10 @@ export function NewTopicForm({ onDone }: NewTopicFormProps) {
   useEffect(() => {
     if (!user) return;
     Promise.all([
-      getDocs(collection(db, 'users')),
+      loadUsers(),
       getDoc(doc(db, 'topics', user.uid)),
-    ]).then(([usersSnap, privateDoc]) => {
-      const others: RegisteredUser[] = usersSnap.docs
-        .filter((d) => d.id !== user.uid)
-        .map((d) => ({
-          uid: d.id,
-          displayName: d.data().displayName ?? 'Unknown',
-          email: d.data().email,
-        }));
-      setOtherUsers(others);
+    ]).then(([allUsers, privateDoc]) => {
+      setOtherUsers(allUsers.filter((u) => u.uid !== user.uid));
       setHasPrivateTopic(
         privateDoc.exists() && privateDoc.data()?.access === 'private'
       );

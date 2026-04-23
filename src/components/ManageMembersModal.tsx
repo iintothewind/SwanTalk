@@ -1,19 +1,14 @@
-import { useState, useEffect } from 'react';
-import { doc, updateDoc, getDocs, collection } from 'firebase/firestore';
+import { useState } from 'react';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { useUsers, type RegisteredUser } from '../hooks/useUsers';
 import { APP_CONFIG } from '../config';
 import type { Topic } from '../types';
 
 const MAX_MEMBERS = 10;
 const VALID_PATTERN = /^[a-zA-Z0-9_]*$/;
-
-interface RegisteredUser {
-  uid: string;
-  displayName: string;
-  email?: string;
-}
 
 function userLabel(u: RegisteredUser): string {
   return u.email ? `${u.displayName}(${u.email})` : u.displayName;
@@ -29,23 +24,11 @@ export function ManageMembersModal({ topic, onClose, readOnly = false }: ManageM
   const { t } = useTranslation();
   const { user } = useAuth();
 
-  const [allUsers, setAllUsers] = useState<RegisteredUser[]>([]);
+  const allUsers = useUsers();
   const [selectedUIDs, setSelectedUIDs] = useState<Set<string>>(new Set(topic.visibility));
   const [topicName, setTopicName] = useState(topic.name);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    getDocs(collection(db, 'users')).then((snap) => {
-      setAllUsers(
-        snap.docs.map((d) => ({
-          uid: d.id,
-          displayName: d.data().displayName ?? 'Unknown',
-          email: d.data().email,
-        }))
-      );
-    });
-  }, []);
 
   // In read-only mode only show users who are actually members.
   const visibleUsers = readOnly
