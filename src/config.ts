@@ -2,7 +2,7 @@
 
 export const APP_CONFIG = {
   // --- Message Limits ---
-  maxMessageLength: 2000,        // Max characters per message (enforced client-side + security rules)
+  maxMessageLength: 3000,        // Max characters per message (enforced client-side + security rules)
 
   // --- Cache / Sync ---
   cacheExpirationDays: 7,        // Messages older than this in IndexedDB are eligible for eviction
