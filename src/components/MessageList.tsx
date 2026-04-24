@@ -92,7 +92,7 @@ export function MessageList() {
       <div
         ref={containerRef}
         onScroll={updateScrollButtons}
-        className="h-full overflow-y-auto flex flex-col py-2"
+        className="h-full overflow-y-auto overflow-x-hidden flex flex-col py-2"
       >
         {hasMore && (
           <div className="flex justify-center py-2">

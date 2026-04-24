@@ -24,7 +24,7 @@ const components: Components = {
       : <code className={className} {...props}>{children}</code>;
   },
   pre: ({ children }) => (
-    <pre className="bg-gray-200 text-gray-800 rounded-lg p-3 my-2 overflow-x-auto text-sm">
+    <pre className="w-full bg-gray-200 text-gray-800 rounded-lg p-3 my-2 overflow-x-auto text-sm">
       {children}
     </pre>
   ),
