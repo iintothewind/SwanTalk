@@ -20,11 +20,11 @@ const components: Components = {
   code: ({ className, children, ...props }) => {
     const isInline = !className;
     return isInline
-      ? <code className="inline-code bg-gray-100 dark:bg-gray-800 text-sm px-1 py-0.5 rounded font-mono" {...props}>{children}</code>
+      ? <code className="inline-code bg-gray-200 text-gray-900 text-sm px-1 py-0.5 rounded font-mono" {...props}>{children}</code>
       : <code className={className} {...props}>{children}</code>;
   },
   pre: ({ children }) => (
-    <pre className="bg-gray-900 text-gray-100 rounded-lg p-3 my-2 overflow-x-auto text-sm">
+    <pre className="bg-gray-200 text-gray-800 rounded-lg p-3 my-2 overflow-x-auto text-sm">
       {children}
     </pre>
   ),
