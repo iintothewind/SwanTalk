@@ -43,7 +43,7 @@ service cloud.firestore {
                       && request.resource.data.sender == request.auth.uid
                       && canAccessTopic(get(/databases/$(database)/documents/topics/$(topicId)).data)
                       && request.resource.data.time == request.time
-                      && request.resource.data.content.size() <= 2000;
+                      && request.resource.data.content.size() <= 9000;
 
         allow update, delete: if false;
       }
