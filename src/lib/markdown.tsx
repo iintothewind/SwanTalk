@@ -21,10 +21,10 @@ const components: Components = {
     const isInline = !className;
     return isInline
       ? <code className="inline-code bg-gray-200 text-gray-900 text-sm px-1 py-0.5 rounded font-mono" {...props}>{children}</code>
-      : <code className={className} {...props}>{children}</code>;
+      : <code className={`${className ?? ''} text-gray-600`} {...props}>{children}</code>;
   },
   pre: ({ children }) => (
-    <pre className="w-full bg-gray-200 text-gray-800 rounded-lg p-3 my-2 overflow-x-auto text-sm">
+    <pre className="w-full bg-transparent text-gray-600 rounded-lg p-3 my-2 overflow-x-auto text-sm">
       {children}
     </pre>
   ),
