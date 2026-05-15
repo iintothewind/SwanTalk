@@ -35,6 +35,7 @@
     "noOtherUsers": "暂无其他注册用户。",
     "creating": "创建中...",
     "create": "创建话题",
+    "cancelNewTopic": "取消创建话题",
     "manageMembers": "管理成员",
     "viewMembers": "查看成员",
     "ownerLabel": "创建者",

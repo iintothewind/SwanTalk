@@ -35,6 +35,7 @@
     "noOtherUsers": "No other registered users yet.",
     "creating": "Creating...",
     "create": "Create Topic",
+    "cancelNewTopic": "Cancel new topic",
     "manageMembers": "Manage Members",
     "viewMembers": "View Members",
     "ownerLabel": "owner",

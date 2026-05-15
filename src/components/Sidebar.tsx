@@ -26,10 +26,15 @@ export function Sidebar() {
         </span>
         <button
           onClick={() => setShowNewForm((v) => !v)}
-          className="text-indigo-500 hover:text-indigo-700 text-xl leading-none font-bold"
-          title={t('topic.newTopic')}
+          className={`text-xl leading-none font-bold transition-colors ${
+            showNewForm
+              ? 'text-red-500 hover:text-red-700'
+              : 'text-indigo-500 hover:text-indigo-700'
+          }`}
+          title={showNewForm ? t('topic.cancelNewTopic') : t('topic.newTopic')}
+          aria-expanded={showNewForm}
         >
-          +
+          {showNewForm ? '-' : '+'}
         </button>
       </div>
 
