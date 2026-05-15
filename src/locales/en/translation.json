@@ -41,6 +41,8 @@
     "ownerLabel": "owner",
     "close": "Close",
     "members": "Members",
+    "searchMembers": "Search members",
+    "noMatchingMembers": "No matching members.",
     "maxMembersReached": "Maximum 10 members reached.",
     "saveMembers": "Save",
     "savingMembers": "Saving...",

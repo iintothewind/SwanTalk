@@ -41,6 +41,8 @@
     "ownerLabel": "创建者",
     "close": "关闭",
     "members": "成员",
+    "searchMembers": "搜索成员",
+    "noMatchingMembers": "没有匹配的成员。",
     "maxMembersReached": "最多只能添加 10 名成员。",
     "saveMembers": "保存",
     "savingMembers": "保存中...",

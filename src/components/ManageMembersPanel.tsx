@@ -1,0 +1,223 @@
+import { useState } from 'react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
+import { db } from '../firebase';
+import { useAuth } from '../contexts/AuthContext';
+import { useUsers, type RegisteredUser } from '../hooks/useUsers';
+import { APP_CONFIG } from '../config';
+import type { Topic } from '../types';
+
+const MAX_MEMBERS = 10;
+const VALID_PATTERN = /^[a-zA-Z0-9_]*$/;
+
+function userLabel(u: RegisteredUser): string {
+  return u.email ? `${u.displayName}(${u.email})` : u.displayName;
+}
+
+interface ManageMembersPanelProps {
+  topic: Topic;
+  onClose: () => void;
+  readOnly?: boolean;
+  hideCloseControls?: boolean;
+}
+
+export function ManageMembersPanel({
+  topic,
+  onClose,
+  readOnly = false,
+  hideCloseControls = false,
+}: ManageMembersPanelProps) {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+
+  const allUsers = useUsers();
+  const [selectedUIDs, setSelectedUIDs] = useState<Set<string>>(
+    new Set(topic.visibility)
+  );
+  const [topicName, setTopicName] = useState(topic.name);
+  const [query, setQuery] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const visibleUsers = readOnly
+    ? allUsers.filter((u) => topic.visibility.includes(u.uid))
+    : allUsers;
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredUsers = normalizedQuery
+    ? visibleUsers.filter((u) =>
+        userLabel(u).toLowerCase().includes(normalizedQuery)
+      )
+    : visibleUsers;
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (!VALID_PATTERN.test(val)) return;
+    if (val.length > APP_CONFIG.topicMaxLength) return;
+    setTopicName(val);
+    setError('');
+  };
+
+  const toggle = (uid: string) => {
+    if (uid === user?.uid) return;
+    setSelectedUIDs((prev) => {
+      const next = new Set(prev);
+      if (next.has(uid)) {
+        next.delete(uid);
+      } else {
+        if (next.size >= MAX_MEMBERS) {
+          setError(t('topic.maxMembersReached'));
+          return prev;
+        }
+        next.add(uid);
+      }
+      setError('');
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    if (!user || !topicName) return;
+    setSaving(true);
+    setError('');
+    try {
+      await updateDoc(doc(db, 'topics', topic.id), {
+        name: topicName,
+        visibility: Array.from(selectedUIDs),
+      });
+      onClose();
+    } catch (err) {
+      console.error('Failed to update topic', err);
+      setError(t('topic.saveMembersError'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mx-2 mb-2 rounded-lg border border-indigo-100 bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-100">
+        <span className="font-semibold text-gray-800 text-xs truncate">
+          {topic.name} - {readOnly ? t('topic.viewMembers') : t('topic.manageMembers')}
+        </span>
+        {!hideCloseControls && (
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-lg leading-none shrink-0"
+            title={t('topic.close')}
+          >
+            x
+          </button>
+        )}
+      </div>
+
+      {!readOnly && (
+        <div className="px-3 py-2 border-b border-gray-100">
+          <label className="block text-xs text-gray-500 mb-1">
+            {t('topic.topicName')}
+          </label>
+          <input
+            type="text"
+            value={topicName}
+            onChange={handleNameChange}
+            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          />
+        </div>
+      )}
+
+      <div className="px-3 py-2 border-b border-gray-100">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('topic.searchMembers')}
+          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        />
+      </div>
+
+      <div className="max-h-56 overflow-y-auto divide-y divide-gray-50">
+        {filteredUsers.length > 0 ? (
+          filteredUsers.map((u) => {
+            const isSelf = u.uid === user?.uid;
+            const checked = selectedUIDs.has(u.uid);
+
+            if (readOnly) {
+              return (
+                <div
+                  key={u.uid}
+                  className={`flex items-center gap-3 px-3 py-2.5 text-sm ${
+                    isSelf ? 'bg-gray-50' : ''
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
+                  <span className="truncate text-gray-700">
+                    {isSelf ? `${userLabel(u)} (${t('topic.you')})` : userLabel(u)}
+                  </span>
+                  {u.uid === topic.owner && (
+                    <span className="ml-auto text-xs text-gray-400 shrink-0">
+                      {t('topic.ownerLabel')}
+                    </span>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <label
+                key={u.uid}
+                className={`flex items-center gap-3 px-3 py-2.5 text-sm ${
+                  isSelf
+                    ? 'bg-gray-50 cursor-default'
+                    : 'hover:bg-gray-50 cursor-pointer'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggle(u.uid)}
+                  disabled={isSelf}
+                  className="accent-indigo-500 shrink-0"
+                />
+                <span className="truncate text-gray-700">
+                  {isSelf ? `${userLabel(u)} (${t('topic.you')})` : userLabel(u)}
+                </span>
+              </label>
+            );
+          })
+        ) : (
+          <p className="px-3 py-3 text-xs text-gray-400">
+            {t('topic.noMatchingMembers')}
+          </p>
+        )}
+      </div>
+
+      {!(readOnly && hideCloseControls) && (
+      <div className="px-3 py-2 border-t border-gray-100 flex flex-col gap-2">
+        {readOnly ? (
+          <button
+            onClick={onClose}
+            className="w-full py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            {t('topic.close')}
+          </button>
+        ) : (
+          <>
+            <div className="flex items-center justify-between gap-2 text-xs text-gray-400">
+              <span>
+                {t('topic.members')}: {selectedUIDs.size} / {MAX_MEMBERS}
+              </span>
+              {error && <span className="text-red-500 text-right">{error}</span>}
+            </div>
+            <button
+              onClick={handleSave}
+              disabled={saving || !topicName}
+              className="w-full py-1.5 text-sm bg-indigo-600 text-white rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors"
+            >
+              {saving ? t('topic.savingMembers') : t('topic.saveMembers')}
+            </button>
+          </>
+        )}
+      </div>
+      )}
+    </div>
+  );
+}
