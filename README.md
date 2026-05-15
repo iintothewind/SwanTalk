@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/favicon.svg" alt="SwanTalk logo" width="96" height="96" />
+</p>
+
 # SwanTalk
 
 A real-time group chat web app for small teams (up to 10 users). Messages are organized into user-created Topics (channels), rendered as Markdown, and synced across all clients in under a second. The UI supports English and Chinese, switchable at runtime.

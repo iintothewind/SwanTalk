@@ -42,7 +42,17 @@ export function TopBar() {
 
   return (
     <header className="flex items-center justify-between px-4 h-14 bg-white border-b border-gray-200 shrink-0">
-      <span className="text-lg font-bold text-indigo-600">{t('app.name')}</span>
+      <div className="flex items-center gap-2 min-w-0">
+        <img
+          src="/favicon.svg"
+          alt=""
+          aria-hidden="true"
+          className="w-8 h-8 shrink-0"
+        />
+        <span className="text-lg font-bold text-indigo-600 truncate">
+          {t('app.name')}
+        </span>
+      </div>
 
       <div className="flex items-center gap-3">
         {/* Notification mute toggle — only shown if permission was granted */}
