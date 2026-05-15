@@ -95,7 +95,7 @@ src/
 ### Prerequisites
 
 - Node.js 18+
-- A Firebase project with **Authentication** (Google provider + Email/Password) and **Cloud Firestore** enabled
+- A Firebase project with **Authentication** (Google provider + Email/Password), **Cloud Firestore**, and **App Check** enabled
 
 ### 1. Clone and install
 
@@ -117,9 +117,13 @@ VITE_FIREBASE_STORAGE_BUCKET=...
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 VITE_FIREBASE_MEASUREMENT_ID=...
+VITE_FIREBASE_APPCHECK_RECAPTCHA_SITE_KEY=...
+# Optional: pin a registered local App Check debug token
+# VITE_FIREBASE_APPCHECK_DEBUG_TOKEN=...
 ```
 
 Copy these values from **Firebase console → Project settings → Your apps → SDK setup and configuration**.
+Use the App Check reCAPTCHA Enterprise site key from **Google Cloud console → reCAPTCHA Enterprise**.
 
 ### 3. Deploy Firestore security rules
 
@@ -135,7 +139,27 @@ firebase deploy --only firestore:rules
 npm run dev
 ```
 
-### 5. Deploy to Firebase Hosting
+### 5. Register an App Check debug token for local development
+
+This app enables Firebase App Check debug mode only during Vite development (`import.meta.env.DEV`). Production builds continue to use the configured reCAPTCHA Enterprise site key.
+
+On the first local run, open the browser developer console and look for:
+
+```text
+AppCheck debug token: "..."
+```
+
+Copy that token, then register it in **Firebase console → App Check → Apps → Manage debug tokens**. After the token is registered, Firebase backend services will accept requests from your local browser while App Check enforcement is enabled.
+
+If you want to reuse a known local token across browser sessions or machines, set it in `.env.local`:
+
+```env
+VITE_FIREBASE_APPCHECK_DEBUG_TOKEN=<registered-debug-token>
+```
+
+Keep debug tokens private. Do not commit them to the repository.
+
+### 6. Deploy to Firebase Hosting
 
 ```bash
 npm run deploy

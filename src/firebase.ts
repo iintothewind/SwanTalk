@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { getAuth } from 'firebase/auth';
 import {
   initializeFirestore,
@@ -18,7 +19,23 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+if (import.meta.env.DEV) {
+  (
+    self as typeof self & {
+      FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean | string;
+    }
+  ).FIREBASE_APPCHECK_DEBUG_TOKEN =
+    import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN || true;
+}
+
+export const app = initializeApp(firebaseConfig);
+
+export const appCheck = initializeAppCheck(app, {
+  provider: new ReCaptchaEnterpriseProvider(
+    import.meta.env.VITE_FIREBASE_APPCHECK_RECAPTCHA_SITE_KEY
+  ),
+  isTokenAutoRefreshEnabled: true,
+});
 
 export const auth = getAuth(app);
 
